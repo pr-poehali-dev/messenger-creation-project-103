@@ -45,7 +45,7 @@ def handler(event: dict, context) -> dict:
     # GET /friends — список принятых друзей
     if method == "GET" and path.endswith("/friends"):
         cur.execute(f"""
-            SELECT u.id, u.name, u.role, u.company, u.online,
+            SELECT u.id, u.name, u.role, u.company, u.online, u.verified,
                    SUBSTRING(u.name, 1, 1) || COALESCE(SUBSTRING(SPLIT_PART(u.name, ' ', 2), 1, 1), '') as initials
             FROM {SCHEMA}.friendships f
             JOIN {SCHEMA}.users u ON (
@@ -56,13 +56,13 @@ def handler(event: dict, context) -> dict:
         rows = cur.fetchall()
         conn.close()
         return {"statusCode": 200, "headers": cors(), "body": json.dumps({
-            "friends": [{"id": r[0], "name": r[1], "role": r[2], "company": r[3], "online": r[4], "initials": r[5]} for r in rows]
+            "friends": [{"id": r[0], "name": r[1], "role": r[2], "company": r[3], "online": r[4], "verified": r[5], "initials": r[6]} for r in rows]
         })}
 
     # GET /suggestions — люди не в друзьях
     if method == "GET" and path.endswith("/suggestions"):
         cur.execute(f"""
-            SELECT u.id, u.name, u.role, u.company,
+            SELECT u.id, u.name, u.role, u.company, u.verified,
                    SUBSTRING(u.name, 1, 1) || COALESCE(SUBSTRING(SPLIT_PART(u.name, ' ', 2), 1, 1), '') as initials
             FROM {SCHEMA}.users u
             WHERE u.id != %s
@@ -76,20 +76,20 @@ def handler(event: dict, context) -> dict:
         rows = cur.fetchall()
         conn.close()
         return {"statusCode": 200, "headers": cors(), "body": json.dumps({
-            "suggestions": [{"id": r[0], "name": r[1], "role": r[2], "company": r[3], "initials": r[4], "mutual": 0} for r in rows]
+            "suggestions": [{"id": r[0], "name": r[1], "role": r[2], "company": r[3], "verified": r[4], "initials": r[5], "mutual": 0} for r in rows]
         })}
 
     # GET /contacts — все пользователи (для поиска)
     if method == "GET" and path.endswith("/contacts"):
         cur.execute(f"""
-            SELECT u.id, u.name, u.role, u.company, u.online,
+            SELECT u.id, u.name, u.role, u.company, u.online, u.verified,
                    SUBSTRING(u.name, 1, 1) || COALESCE(SUBSTRING(SPLIT_PART(u.name, ' ', 2), 1, 1), '') as initials
             FROM {SCHEMA}.users u WHERE u.id != %s ORDER BY u.name
         """, (uid,))
         rows = cur.fetchall()
         conn.close()
         return {"statusCode": 200, "headers": cors(), "body": json.dumps({
-            "contacts": [{"id": r[0], "name": r[1], "role": r[2], "company": r[3], "online": r[4], "initials": r[5]} for r in rows]
+            "contacts": [{"id": r[0], "name": r[1], "role": r[2], "company": r[3], "online": r[4], "verified": r[5], "initials": r[6]} for r in rows]
         })}
 
     # POST /friends/add — добавить в друзья
@@ -103,6 +103,21 @@ def handler(event: dict, context) -> dict:
             VALUES (%s, %s, 'accepted')
             ON CONFLICT (user_id, friend_id) DO UPDATE SET status = 'accepted'
         """, (uid, friend_id))
+        conn.commit()
+        conn.close()
+        return {"statusCode": 200, "headers": cors(), "body": json.dumps({"ok": True})}
+
+    # POST /verify — выдать/снять верификацию (только для user_id=1 — первый зарегистрированный)
+    if method == "POST" and path.endswith("/verify"):
+        target_id = body.get("user_id")
+        verified = body.get("verified", True)
+        if not target_id:
+            conn.close()
+            return {"statusCode": 400, "headers": cors(), "body": json.dumps({"error": "Укажите user_id"})}
+        if uid != 1:
+            conn.close()
+            return {"statusCode": 403, "headers": cors(), "body": json.dumps({"error": "Нет прав"})}
+        cur.execute(f"UPDATE {SCHEMA}.users SET verified = %s WHERE id = %s", (verified, target_id))
         conn.commit()
         conn.close()
         return {"statusCode": 200, "headers": cors(), "body": json.dumps({"ok": True})}

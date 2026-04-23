@@ -9,14 +9,27 @@ const API = {
 
 type Section = "chats" | "contacts" | "groups" | "suggestions" | "settings";
 
-interface User { id: number; name: string; email: string; role: string; company: string; }
-interface ChatItem { id: number; peer_id: number; peer_name: string; peer_role: string; peer_online: boolean; last_msg: string; last_time: string; unread: number; }
+interface User { id: number; name: string; email: string; role: string; company: string; verified?: boolean; }
+interface ChatItem { id: number; peer_id: number; peer_name: string; peer_role: string; peer_online: boolean; last_msg: string; last_time: string; unread: number; peer_verified?: boolean; }
 interface MessageItem { id: number; sender_id: number; text: string; type: string; file_name: string | null; time: string; out: boolean; }
-interface ContactItem { id: number; name: string; role: string; company: string; online: boolean; initials: string; }
-interface SuggestionItem { id: number; name: string; role: string; company: string; initials: string; mutual: number; }
+interface ContactItem { id: number; name: string; role: string; company: string; online: boolean; initials: string; verified?: boolean; }
+interface SuggestionItem { id: number; name: string; role: string; company: string; initials: string; mutual: number; verified?: boolean; }
 
 const avatarColors = ["bg-slate-600","bg-stone-600","bg-zinc-600","bg-neutral-600","bg-slate-700","bg-stone-700","bg-zinc-700"];
 function getAvatarColor(id: number) { return avatarColors[id % avatarColors.length]; }
+
+function VerifiedBadge({ size = "sm" }: { size?: "sm" | "md" }) {
+  const s = size === "md" ? "w-4 h-4" : "w-3.5 h-3.5";
+  return (
+    <span title="Подтверждённый аккаунт"
+      className={`inline-flex items-center justify-center ${s} rounded-full flex-shrink-0`}
+      style={{ background: "hsl(213 60% 38%)" }}>
+      <svg viewBox="0 0 12 12" fill="none" className="w-2 h-2">
+        <path d="M2 6l3 3 5-5" stroke="white" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+      </svg>
+    </span>
+  );
+}
 
 function Avatar({ name, id, size = "md", online }: { name: string; id: number; size?: "sm" | "md" | "lg"; online?: boolean }) {
   const parts = name.trim().split(" ");
@@ -308,8 +321,11 @@ export default function Index() {
                   style={{ borderColor: "hsl(220 13% 93%)" }}>
                   <Avatar name={chat.peer_name} id={chat.peer_id} online={chat.peer_online} />
                   <div className="flex-1 min-w-0">
-                    <div className="flex justify-between items-baseline">
-                      <span className="text-sm font-medium text-slate-800 truncate">{chat.peer_name}</span>
+                    <div className="flex justify-between items-center">
+                      <span className="flex items-center gap-1 min-w-0">
+                        <span className="text-sm font-medium text-slate-800 truncate">{chat.peer_name}</span>
+                        {chat.peer_verified && <VerifiedBadge />}
+                      </span>
                       <span className="text-xs text-slate-400 ml-2 flex-shrink-0">{chat.last_time}</span>
                     </div>
                     <div className="flex justify-between items-center mt-0.5">
@@ -335,7 +351,10 @@ export default function Index() {
                   style={{ borderColor: "hsl(220 13% 93%)" }}>
                   <Avatar name={contact.name} id={contact.id} online={contact.online} />
                   <div className="flex-1 min-w-0">
-                    <div className="text-sm font-medium text-slate-800">{contact.name}</div>
+                    <div className="flex items-center gap-1">
+                      <span className="text-sm font-medium text-slate-800">{contact.name}</span>
+                      {contact.verified && <VerifiedBadge />}
+                    </div>
                     <div className="text-xs text-slate-500 truncate">{contact.role}</div>
                     <div className="text-xs text-slate-400 truncate font-mono">{contact.company}</div>
                   </div>
@@ -372,7 +391,10 @@ export default function Index() {
                   style={{ borderColor: "hsl(220 13% 93%)" }}>
                   <Avatar name={s.name} id={s.id} />
                   <div className="flex-1 min-w-0">
-                    <div className="text-sm font-medium text-slate-800">{s.name}</div>
+                    <div className="flex items-center gap-1">
+                      <span className="text-sm font-medium text-slate-800">{s.name}</span>
+                      {s.verified && <VerifiedBadge />}
+                    </div>
                     <div className="text-xs text-slate-500 truncate">{s.role}</div>
                   </div>
                   <button onClick={() => addFriend(s.id)}
@@ -391,7 +413,10 @@ export default function Index() {
                 <div className="flex items-center gap-3">
                   <Avatar name={user.name} id={user.id} size="lg" />
                   <div>
-                    <div className="text-sm font-semibold text-slate-800">{user.name}</div>
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-sm font-semibold text-slate-800">{user.name}</span>
+                      {user.verified && <VerifiedBadge size="md" />}
+                    </div>
                     <div className="text-xs text-slate-500">{user.role || "Роль не указана"}</div>
                     <div className="text-xs text-slate-400 font-mono">{user.email}</div>
                   </div>
@@ -428,7 +453,10 @@ export default function Index() {
           <div className="flex items-center gap-3 px-5 py-3 border-b bg-white" style={{ borderColor: "hsl(var(--border))" }}>
             <Avatar name={activeChat.peer_name} id={activeChat.peer_id} online={activeChat.peer_online} />
             <div>
-              <div className="text-sm font-semibold text-slate-800">{activeChat.peer_name}</div>
+              <div className="flex items-center gap-1">
+                <span className="text-sm font-semibold text-slate-800">{activeChat.peer_name}</span>
+                {activeChat.peer_verified && <VerifiedBadge size="md" />}
+              </div>
               <div className="text-xs text-slate-500">{activeChat.peer_role || (activeChat.peer_online ? "В сети" : "Не в сети")}</div>
             </div>
             <div className="ml-auto flex items-center gap-1">

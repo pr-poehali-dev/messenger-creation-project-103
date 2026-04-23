@@ -57,7 +57,7 @@ def handler(event: dict, context) -> dict:
             return {"statusCode": 409, "headers": cors_headers(), "body": json.dumps({"error": "Пользователь с таким email уже существует"})}
 
         cur.execute(
-            f"INSERT INTO {SCHEMA}.users (name, email, role, company, password_hash, session_token, online) VALUES (%s, %s, %s, %s, %s, %s, true) RETURNING id, name, email, role, company",
+            f"INSERT INTO {SCHEMA}.users (name, email, role, company, password_hash, session_token, online) VALUES (%s, %s, %s, %s, %s, %s, true) RETURNING id, name, email, role, company, verified",
             (name, email, role, company, pw_hash, token)
         )
         row = cur.fetchone()
@@ -67,7 +67,7 @@ def handler(event: dict, context) -> dict:
             "statusCode": 200,
             "headers": cors_headers(),
             "body": json.dumps({
-                "user": {"id": row[0], "name": row[1], "email": row[2], "role": row[3], "company": row[4]},
+                "user": {"id": row[0], "name": row[1], "email": row[2], "role": row[3], "company": row[4], "verified": row[5]},
                 "token": token
             })
         }
@@ -79,7 +79,7 @@ def handler(event: dict, context) -> dict:
         pw_hash = hash_password(password)
 
         cur.execute(
-            f"SELECT id, name, email, role, company FROM {SCHEMA}.users WHERE email = %s AND password_hash = %s",
+            f"SELECT id, name, email, role, company, verified FROM {SCHEMA}.users WHERE email = %s AND password_hash = %s",
             (email, pw_hash)
         )
         row = cur.fetchone()
@@ -95,7 +95,7 @@ def handler(event: dict, context) -> dict:
             "statusCode": 200,
             "headers": cors_headers(),
             "body": json.dumps({
-                "user": {"id": row[0], "name": row[1], "email": row[2], "role": row[3], "company": row[4]},
+                "user": {"id": row[0], "name": row[1], "email": row[2], "role": row[3], "company": row[4], "verified": row[5]},
                 "token": token
             })
         }

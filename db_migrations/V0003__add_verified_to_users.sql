@@ -1,0 +1,2 @@
+ALTER TABLE t_p95226477_messenger_creation_p.users
+  ADD COLUMN IF NOT EXISTS verified BOOLEAN NOT NULL DEFAULT FALSE;

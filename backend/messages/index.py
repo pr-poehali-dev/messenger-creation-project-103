@@ -52,13 +52,14 @@ def handler(event: dict, context) -> dict:
                    CASE WHEN c.user1_id = %s THEN u2.online ELSE u1.online END as peer_online,
                    (SELECT m.text FROM {SCHEMA}.messages m WHERE m.chat_id = c.id ORDER BY m.created_at DESC LIMIT 1) as last_msg,
                    (SELECT m.created_at FROM {SCHEMA}.messages m WHERE m.chat_id = c.id ORDER BY m.created_at DESC LIMIT 1) as last_time,
-                   (SELECT COUNT(*) FROM {SCHEMA}.messages m WHERE m.chat_id = c.id AND m.sender_id != %s) as unread
+                   (SELECT COUNT(*) FROM {SCHEMA}.messages m WHERE m.chat_id = c.id AND m.sender_id != %s) as unread,
+                   CASE WHEN c.user1_id = %s THEN u2.verified ELSE u1.verified END as peer_verified
             FROM {SCHEMA}.chats c
             JOIN {SCHEMA}.users u1 ON c.user1_id = u1.id
             JOIN {SCHEMA}.users u2 ON c.user2_id = u2.id
             WHERE c.user1_id = %s OR c.user2_id = %s
             ORDER BY last_time DESC NULLS LAST
-        """, (uid, uid, uid, uid, uid, uid, uid))
+        """, (uid, uid, uid, uid, uid, uid, uid, uid))
         rows = cur.fetchall()
         conn.close()
         chats = []
@@ -67,7 +68,7 @@ def handler(event: dict, context) -> dict:
                 "id": r[0], "peer_id": r[1], "peer_name": r[2],
                 "peer_role": r[3], "peer_online": r[4],
                 "last_msg": r[5] or "", "last_time": r[6].strftime("%H:%M") if r[6] else "",
-                "unread": int(r[7])
+                "unread": int(r[7]), "peer_verified": bool(r[8])
             })
         return {"statusCode": 200, "headers": cors(), "body": json.dumps({"chats": chats})}
 

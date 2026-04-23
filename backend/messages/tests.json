@@ -1,0 +1,12 @@
+{
+  "tests": [
+    {
+      "name": "Get chats (no auth)",
+      "method": "GET",
+      "path": "/chats",
+      "expectedStatus": 401,
+      "expectedBody": {"error": "string"},
+      "bodyMatcher": "partial"
+    }
+  ]
+}
